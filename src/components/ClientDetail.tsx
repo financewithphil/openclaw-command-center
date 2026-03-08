@@ -611,6 +611,37 @@ function AgentsTab({ agents }: { agents: AgentNode[] }) {
                 ))}
               </div>
             </div>
+
+            {/* Last Action */}
+            {selected.lastAction && (
+              <div style={{ marginTop: 16, paddingTop: 16, borderTop: '1px solid var(--border)' }}>
+                <div style={detailLabel}>Last Action</div>
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'flex-start',
+                  gap: 10,
+                  padding: '12px 14px',
+                  borderRadius: 10,
+                  background: 'var(--bg)',
+                  border: '1px solid var(--border)',
+                }}>
+                  <Clock size={14} color="var(--primary)" style={{ marginTop: 2, flexShrink: 0 }} />
+                  <div style={{ flex: 1 }}>
+                    <div style={{ color: 'var(--text)', fontSize: 13, lineHeight: 1.5 }}>
+                      {selected.lastAction.description}
+                    </div>
+                    <div style={{ color: 'var(--text-muted)', fontSize: 11, marginTop: 4 }}>
+                      {new Date(selected.lastAction.timestamp).toLocaleString('en-US', {
+                        month: 'short', day: 'numeric', hour: 'numeric',
+                        minute: '2-digit', hour12: true,
+                      })}
+                      {' — '}
+                      {formatTimeAgo(selected.lastAction.timestamp)}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         ) : (
           <div style={{

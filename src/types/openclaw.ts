@@ -100,6 +100,10 @@ export interface AgentNode {
   model: string;
   status: 'active' | 'standby' | 'offline';
   channels?: string[];            // communication channels available
+  lastAction?: {
+    description: string;
+    timestamp: string;             // ISO timestamp
+  };
 }
 
 export interface BridgeResponse<T = unknown> {

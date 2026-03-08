@@ -491,6 +491,7 @@ const mockAgents: AgentNode[] = [
     model: 'claude-sonnet-4-20250514',
     status: 'active',
     channels: ['Discord', 'iMessage'],
+    lastAction: { description: 'Skool community pulse — 105 members, 5 online, 5 new notifications', timestamp: new Date(Date.now() - 1000 * 60 * 30).toISOString() },
   },
   {
     id: 'kit-grant',
@@ -504,6 +505,7 @@ const mockAgents: AgentNode[] = [
     taskTypes: ['Grant research', 'Application writing', 'Deadline tracking', 'Funder relations', 'Compliance monitoring', 'LOI drafting', 'Budget justification'],
     model: 'Haiku (research) / Sonnet (writing)',
     status: 'active',
+    lastAction: { description: 'Drafted LOI for Community Foundation for Greater Atlanta ($100K)', timestamp: new Date(Date.now() - 1000 * 60 * 60 * 26).toISOString() },
   },
   {
     id: 'kit-community',
@@ -517,6 +519,7 @@ const mockAgents: AgentNode[] = [
     taskTypes: ['Community monitoring', 'Engagement tracking', 'Content strategy', 'Member onboarding', 'Growth analytics', 'Event coordination'],
     model: 'Haiku (daily) / Sonnet (strategy)',
     status: 'active',
+    lastAction: { description: 'Community pulse check — 105 members, Vg Lockedin & Jayden Rodney active', timestamp: new Date(Date.now() - 1000 * 60 * 30).toISOString() },
   },
   {
     id: 'kit-finance',
@@ -530,6 +533,7 @@ const mockAgents: AgentNode[] = [
     taskTypes: ['Budget tracking', 'Financial reporting', 'Revenue forecasting', 'Cost analysis', 'Board presentations', 'Audit support'],
     model: 'Haiku (tracking) / Sonnet (planning)',
     status: 'active',
+    lastAction: { description: 'Updated revenue diversification strategy — $180K current, targeting $300K', timestamp: new Date(Date.now() - 1000 * 60 * 60 * 48).toISOString() },
   },
   {
     id: 'kit-program',
@@ -543,6 +547,7 @@ const mockAgents: AgentNode[] = [
     taskTypes: ['Curriculum development', 'Participant tracking', 'Outcome measurement', 'Staff training', 'Quality assurance', 'Program evaluation'],
     model: 'Haiku (scheduling) / Sonnet (curriculum)',
     status: 'active',
+    lastAction: { description: 'Program evaluation report — 750 served YTD, 87% completion rate', timestamp: new Date(Date.now() - 1000 * 60 * 60 * 72).toISOString() },
   },
   {
     id: 'kit-outreach',
@@ -556,6 +561,7 @@ const mockAgents: AgentNode[] = [
     taskTypes: ['Partnership development', 'Marketing strategy', 'Stakeholder comms', 'Event planning', 'Brand management', 'Digital presence'],
     model: 'Haiku (comms) / Sonnet (strategy)',
     status: 'active',
+    lastAction: { description: 'Sent partnership proposal to DeKalb County workforce development', timestamp: new Date(Date.now() - 1000 * 60 * 60 * 36).toISOString() },
   },
   {
     id: 'kit-webdev-mgr',
@@ -569,6 +575,7 @@ const mockAgents: AgentNode[] = [
     taskTypes: ['Project coordination', 'Priority management', 'Timeline tracking', 'Resource allocation', 'Cross-business sync'],
     model: 'Sonnet',
     status: 'active',
+    lastAction: { description: 'Created project board — 4 sites prioritized, Peachtree Parking first', timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24 * 2).toISOString() },
   },
   {
     id: 'kit-webdev-arch',
@@ -582,6 +589,7 @@ const mockAgents: AgentNode[] = [
     taskTypes: ['Site audits', 'Technical planning', 'Requirements docs', 'Architecture decisions'],
     model: 'Sonnet',
     status: 'standby',
+    lastAction: { description: 'Completed site audit for Peachtree Parking — documented tech requirements', timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24 * 5).toISOString() },
   },
   {
     id: 'kit-webdev-build',
@@ -595,6 +603,7 @@ const mockAgents: AgentNode[] = [
     taskTypes: ['WordPress setup', 'Plugin installation', 'Page building', 'Staging deploys', 'Code reviews'],
     model: 'Sonnet',
     status: 'standby',
+    lastAction: { description: 'Installed Elementor Pro + Yoast SEO on Peachtree staging environment', timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24 * 5).toISOString() },
   },
   {
     id: 'kit-webdev-content',
@@ -608,6 +617,7 @@ const mockAgents: AgentNode[] = [
     taskTypes: ['Asset organization', 'Google Drive management', 'Brand library curation', 'Weekly archiving', 'Copy inventory'],
     model: 'Haiku',
     status: 'standby',
+    lastAction: { description: 'Organized Google Drive brand assets — 4 business folders + weekly archive structure', timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24 * 4).toISOString() },
   },
   {
     id: 'kit-webdev-qa',
@@ -621,6 +631,7 @@ const mockAgents: AgentNode[] = [
     taskTypes: ['Mobile testing', 'Page speed audit', 'SSL verification', 'SEO checks', 'Form testing', 'Analytics validation'],
     model: 'Haiku',
     status: 'standby',
+    lastAction: { description: 'Created launch checklist template — 24 checks across mobile, speed, SSL, SEO', timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24 * 6).toISOString() },
   },
   // Jacob's org — simple single agent
   {
@@ -636,6 +647,7 @@ const mockAgents: AgentNode[] = [
     model: 'openai-codex/gpt-5.3-codex',
     status: 'active',
     channels: ['iMessage', 'WhatsApp'],
+    lastAction: { description: 'Sent email to jacob@mistorakitchen.com — "On my way" via gmail-send', timestamp: new Date(Date.now() - 1000 * 60 * 15).toISOString() },
   },
 ];
 
