@@ -65,6 +65,28 @@ export interface ClientStatus {
   activeModel: string;
 }
 
+export interface SkillInfo {
+  id: string;
+  clientId: string;
+  name: string;
+  emoji: string;
+  description: string;
+  status: 'ready' | 'missing' | 'disabled';
+  missingRequirement?: string;
+}
+
+export interface ModelInfo {
+  id: string;
+  clientId: string;
+  name: string;
+  provider: string;
+  authMethod: 'api_key' | 'oauth' | 'token' | 'free';
+  contextWindow: number;
+  maxTokens: number;
+  isPrimary: boolean;
+  cost: { input: number; output: number };
+}
+
 export interface BridgeResponse<T = unknown> {
   success: boolean;
   data?: T;

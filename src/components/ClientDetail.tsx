@@ -21,10 +21,17 @@ import {
   FileText,
   BookOpen,
   Bell,
+  Key,
+  ChevronDown,
+  ChevronUp,
+  Cpu,
+  Package,
+  Lock,
+  Globe,
 } from 'lucide-react';
-import type { AgentActivity, CronJob, Alert as AlertType, TaskRecord } from '../types/openclaw';
+import type { AgentActivity, CronJob, Alert as AlertType, TaskRecord, SkillInfo, ModelInfo } from '../types/openclaw';
 
-type TabKey = 'activity' | 'cron' | 'alerts' | 'tasks';
+type TabKey = 'activity' | 'cron' | 'alerts' | 'tasks' | 'skills' | 'models';
 
 function formatTimeAgo(timestamp: string): string {
   const diff = Date.now() - new Date(timestamp).getTime();
@@ -40,7 +47,7 @@ function formatTimeAgo(timestamp: string): string {
 export default function ClientDetail() {
   const {
     clients, selectedClientId, clientStatuses,
-    activities, cronJobs, alerts, tasks, resolveAlert,
+    activities, cronJobs, alerts, tasks, skills, models, resolveAlert,
   } = useCommandCenterStore();
 
   const [activeTab, setActiveTab] = useState<TabKey>('activity');
@@ -71,14 +78,19 @@ export default function ClientDetail() {
   const clientTasks = tasks
     .filter((t) => t.clientId === client.id)
     .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+  const clientSkills = skills.filter((s) => s.clientId === client.id);
+  const clientModels = models.filter((m) => m.clientId === client.id);
 
   const unresolvedAlerts = clientAlerts.filter((a) => !a.resolved).length;
+  const readySkills = clientSkills.filter((s) => s.status === 'ready').length;
 
   const tabs: { key: TabKey; label: string; icon: React.ReactNode; badge?: number }[] = [
     { key: 'activity', label: 'Activity', icon: <Activity size={14} /> },
     { key: 'cron', label: 'Cron Jobs', icon: <Clock size={14} /> },
     { key: 'alerts', label: 'Alerts', icon: <AlertTriangle size={14} />, badge: unresolvedAlerts },
     { key: 'tasks', label: 'Tasks', icon: <CheckCircle2 size={14} /> },
+    { key: 'skills', label: 'Skills', icon: <Zap size={14} />, badge: readySkills },
+    { key: 'models', label: 'Models', icon: <Code size={14} /> },
   ];
 
   return (
@@ -159,6 +171,8 @@ export default function ClientDetail() {
         {activeTab === 'cron' && <CronTab cronJobs={clientCrons} />}
         {activeTab === 'alerts' && <AlertsTab alerts={clientAlerts} onResolve={resolveAlert} />}
         {activeTab === 'tasks' && <TasksTab tasks={clientTasks} />}
+        {activeTab === 'skills' && <SkillsTab skills={clientSkills} />}
+        {activeTab === 'models' && <ModelsTab models={clientModels} />}
       </div>
     </div>
   );
@@ -367,6 +381,263 @@ function TasksTab({ tasks }: { tasks: TaskRecord[] }) {
         </div>
       ))}
       {tasks.length === 0 && <div style={styles.emptyTab}>No tasks recorded yet</div>}
+    </div>
+  );
+}
+
+function SkillsTab({ skills }: { skills: SkillInfo[] }) {
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [filter, setFilter] = useState<'all' | 'ready' | 'missing'>('all');
+
+  const filtered = filter === 'all' ? skills : skills.filter((s) => s.status === filter);
+  const readyCount = skills.filter((s) => s.status === 'ready').length;
+  const missingCount = skills.filter((s) => s.status === 'missing').length;
+
+  return (
+    <div>
+      {/* Filter bar */}
+      <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
+        {([
+          { key: 'all' as const, label: `All (${skills.length})` },
+          { key: 'ready' as const, label: `Ready (${readyCount})` },
+          { key: 'missing' as const, label: `Missing (${missingCount})` },
+        ]).map((f) => (
+          <button
+            key={f.key}
+            onClick={() => setFilter(f.key)}
+            style={{
+              padding: '6px 14px',
+              borderRadius: 8,
+              border: filter === f.key ? '1px solid var(--primary)' : '1px solid var(--border)',
+              background: filter === f.key ? 'rgba(0,240,255,0.1)' : 'transparent',
+              color: filter === f.key ? 'var(--primary)' : 'var(--text-muted)',
+              fontSize: 12,
+              fontWeight: 600,
+              cursor: 'pointer',
+            }}
+          >
+            {f.label}
+          </button>
+        ))}
+      </div>
+
+      <div style={{ display: 'grid', gap: 6 }}>
+        {filtered.map((skill) => {
+          const isExpanded = expandedId === skill.id;
+          return (
+            <div key={skill.id}>
+              <button
+                onClick={() => setExpandedId(isExpanded ? null : skill.id)}
+                style={{
+                  width: '100%',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 10,
+                  padding: '10px 14px',
+                  borderRadius: isExpanded ? '12px 12px 0 0' : 12,
+                  border: '1px solid var(--border)',
+                  borderBottom: isExpanded ? '1px solid var(--border)' : undefined,
+                  background: 'var(--surface)',
+                  color: 'var(--text)',
+                  cursor: 'pointer',
+                  textAlign: 'left' as const,
+                }}
+              >
+                <span style={{ fontSize: 16 }}>{skill.emoji}</span>
+                <span style={{ flex: 1, fontWeight: 600, fontSize: 14 }}>{skill.name}</span>
+                <span style={{
+                  fontSize: 10,
+                  fontWeight: 700,
+                  textTransform: 'uppercase' as const,
+                  padding: '2px 8px',
+                  borderRadius: 6,
+                  background: skill.status === 'ready' ? 'rgba(0,255,102,0.15)' : 'rgba(255,61,113,0.15)',
+                  color: skill.status === 'ready' ? 'var(--success)' : 'var(--error)',
+                }}>
+                  {skill.status}
+                </span>
+                {isExpanded ? <ChevronUp size={14} color="var(--text-muted)" /> : <ChevronDown size={14} color="var(--text-muted)" />}
+              </button>
+              {isExpanded && (
+                <div style={{
+                  padding: '12px 14px',
+                  background: 'var(--bg)',
+                  border: '1px solid var(--border)',
+                  borderTop: 'none',
+                  borderRadius: '0 0 12px 12px',
+                }}>
+                  <p style={{ color: 'var(--text-muted)', fontSize: 13, lineHeight: 1.6, margin: 0 }}>
+                    {skill.description}
+                  </p>
+                  {skill.missingRequirement && (
+                    <div style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 6,
+                      marginTop: 8,
+                      padding: '6px 10px',
+                      borderRadius: 6,
+                      background: 'rgba(255,61,113,0.08)',
+                      color: 'var(--error)',
+                      fontSize: 12,
+                    }}>
+                      <Package size={12} />
+                      Missing: {skill.missingRequirement}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+      {filtered.length === 0 && <div style={styles.emptyTab}>No skills match this filter</div>}
+    </div>
+  );
+}
+
+function authMethodLabel(method: ModelInfo['authMethod']) {
+  switch (method) {
+    case 'api_key': return 'API Key';
+    case 'oauth': return 'OAuth';
+    case 'token': return 'Token';
+    case 'free': return 'Free (Local)';
+  }
+}
+
+function authMethodIcon(method: ModelInfo['authMethod']) {
+  switch (method) {
+    case 'api_key': return <Key size={14} />;
+    case 'oauth': return <Globe size={14} />;
+    case 'token': return <Lock size={14} />;
+    case 'free': return <Cpu size={14} />;
+  }
+}
+
+function authMethodColor(method: ModelInfo['authMethod']) {
+  switch (method) {
+    case 'api_key': return 'var(--warning)';
+    case 'oauth': return 'var(--accent)';
+    case 'token': return 'var(--primary)';
+    case 'free': return 'var(--success)';
+  }
+}
+
+function formatCtx(n: number) {
+  if (n >= 1000) return `${(n / 1000).toFixed(0)}k`;
+  return `${n}`;
+}
+
+function ModelsTab({ models }: { models: ModelInfo[] }) {
+  return (
+    <div style={{ display: 'grid', gap: 10 }}>
+      {models.map((model) => (
+        <div key={model.id} style={{
+          ...styles.card,
+          borderLeft: model.isPrimary ? '4px solid var(--primary)' : undefined,
+        }}>
+          <div style={styles.cardRow}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <Cpu size={18} color={model.isPrimary ? 'var(--primary)' : 'var(--text-muted)'} />
+              <div>
+                <div style={{ fontWeight: 700, fontSize: 15 }}>
+                  {model.name}
+                  {model.isPrimary && (
+                    <span style={{
+                      marginLeft: 8,
+                      fontSize: 10,
+                      fontWeight: 700,
+                      padding: '2px 8px',
+                      borderRadius: 6,
+                      background: 'rgba(0,240,255,0.15)',
+                      color: 'var(--primary)',
+                      textTransform: 'uppercase' as const,
+                    }}>
+                      Primary
+                    </span>
+                  )}
+                </div>
+                <div style={{ color: 'var(--text-muted)', fontSize: 12, marginTop: 2 }}>
+                  {model.provider}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', gap: 16, marginTop: 12, flexWrap: 'wrap' as const }}>
+            {/* Auth Method */}
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 6,
+              padding: '6px 12px',
+              borderRadius: 8,
+              background: 'var(--bg)',
+              border: '1px solid var(--border)',
+            }}>
+              <span style={{ color: authMethodColor(model.authMethod) }}>
+                {authMethodIcon(model.authMethod)}
+              </span>
+              <span style={{ fontSize: 12, fontWeight: 600, color: authMethodColor(model.authMethod) }}>
+                {authMethodLabel(model.authMethod)}
+              </span>
+            </div>
+
+            {/* Context Window */}
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 6,
+              padding: '6px 12px',
+              borderRadius: 8,
+              background: 'var(--bg)',
+              border: '1px solid var(--border)',
+            }}>
+              <span style={{ color: 'var(--text-muted)', fontSize: 12 }}>Context:</span>
+              <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text)' }}>
+                {formatCtx(model.contextWindow)} tokens
+              </span>
+            </div>
+
+            {/* Max Output */}
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 6,
+              padding: '6px 12px',
+              borderRadius: 8,
+              background: 'var(--bg)',
+              border: '1px solid var(--border)',
+            }}>
+              <span style={{ color: 'var(--text-muted)', fontSize: 12 }}>Max output:</span>
+              <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text)' }}>
+                {formatCtx(model.maxTokens)}
+              </span>
+            </div>
+
+            {/* Cost */}
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 6,
+              padding: '6px 12px',
+              borderRadius: 8,
+              background: 'var(--bg)',
+              border: '1px solid var(--border)',
+            }}>
+              <span style={{ color: 'var(--text-muted)', fontSize: 12 }}>Cost:</span>
+              <span style={{
+                fontSize: 12,
+                fontWeight: 700,
+                color: model.cost.input === 0 ? 'var(--success)' : 'var(--warning)',
+              }}>
+                {model.cost.input === 0 ? 'Free' : `$${model.cost.input}/$${model.cost.output} per 1M`}
+              </span>
+            </div>
+          </div>
+        </div>
+      ))}
+      {models.length === 0 && <div style={styles.emptyTab}>No models configured</div>}
     </div>
   );
 }

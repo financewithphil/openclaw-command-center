@@ -7,12 +7,16 @@ import type {
   TaskRecord,
   ClientStatus,
   BridgeResponse,
+  SkillInfo,
+  ModelInfo,
 } from '../types/openclaw';
 
 interface CommandCenterState {
   clients: OpenClawClient[];
   selectedClientId: string | null;
   clientStatuses: Record<string, ClientStatus>;
+  skills: SkillInfo[];
+  models: ModelInfo[];
   activities: AgentActivity[];
   cronJobs: CronJob[];
   alerts: Alert[];
@@ -420,10 +424,62 @@ const mockClientStatuses: Record<string, ClientStatus> = {
   },
 };
 
+const mockSkills: SkillInfo[] = [
+  // Kit's skills (17 ready)
+  { id: 'k-s1', clientId: 'kit-001', name: 'agent-swarm', emoji: '📦', description: 'Run a 5-6 agent swarm in Claude Code for real shipping projects. Specialized agent roles for frontend, backend, research, security, QA.', status: 'ready' },
+  { id: 'k-s2', clientId: 'kit-001', name: 'brand-guidelines', emoji: '📦', description: 'Create and enforce brand identity systems including logos, colors, typography, and usage rules.', status: 'ready' },
+  { id: 'k-s3', clientId: 'kit-001', name: 'canvas-design', emoji: '📦', description: 'Create visual designs using HTML Canvas, SVG, or CSS art. Generate illustrations, diagrams, infographics, posters.', status: 'ready' },
+  { id: 'k-s4', clientId: 'kit-001', name: 'claude-api', emoji: '📦', description: 'Build apps with the Claude API or Anthropic SDK. Triggers on anthropic/@anthropic-ai/sdk imports.', status: 'ready' },
+  { id: 'k-s5', clientId: 'kit-001', name: 'clawdcursor', emoji: '📦', description: 'AI desktop agent — control any app on Windows/macOS. Send natural language tasks to click, type, navigate.', status: 'ready' },
+  { id: 'k-s6', clientId: 'kit-001', name: 'community-pulse', emoji: '📦', description: 'Monitor and grow Skool communities. Engagement tracking, member insights, content performance, growth strategy.', status: 'ready' },
+  { id: 'k-s7', clientId: 'kit-001', name: 'frontend-design', emoji: '📦', description: 'Create distinctive, production-grade frontend interfaces with high design quality. Avoids generic AI aesthetics.', status: 'ready' },
+  { id: 'k-s8', clientId: 'kit-001', name: 'grant-hunter', emoji: '📦', description: 'Find and track grants for nonprofits. Research foundations, draft narratives/LOIs, track deadlines, analyze 990 forms.', status: 'ready' },
+  { id: 'k-s9', clientId: 'kit-001', name: 'internal-comms', emoji: '📦', description: 'Draft professional internal communications — emails, memos, announcements, Slack messages, status reports.', status: 'ready' },
+  { id: 'k-s10', clientId: 'kit-001', name: 'mcp-builder', emoji: '📦', description: 'Create MCP servers that enable LLMs to interact with external services through well-designed tools.', status: 'ready' },
+  { id: 'k-s11', clientId: 'kit-001', name: 'web-artifacts-builder', emoji: '📦', description: 'Build interactive web artifacts, mini-apps, and single-file HTML/React applications.', status: 'ready' },
+  { id: 'k-s12', clientId: 'kit-001', name: 'webapp-testing', emoji: '📦', description: 'Test local web applications using Playwright. Verify frontend functionality, debug UI, capture screenshots.', status: 'ready' },
+  { id: 'k-s13', clientId: 'kit-001', name: 'coding-agent', emoji: '🧩', description: 'Run Codex CLI, Claude Code, OpenCode, or Pi Coding Agent via background process for programmatic control.', status: 'ready' },
+  { id: 'k-s14', clientId: 'kit-001', name: 'healthcheck', emoji: '📦', description: 'Host security hardening and risk-tolerance configuration for OpenClaw deployments.', status: 'ready' },
+  { id: 'k-s15', clientId: 'kit-001', name: 'imsg', emoji: '📨', description: 'iMessage/SMS CLI — list chats, view history, watch for new messages, and send messages.', status: 'ready' },
+  { id: 'k-s16', clientId: 'kit-001', name: 'skill-creator', emoji: '📦', description: 'Create or update AgentSkills. Design, structure, and package skills with scripts, references, and assets.', status: 'ready' },
+  { id: 'k-s17', clientId: 'kit-001', name: 'weather', emoji: '🌤️', description: 'Get current weather and forecasts. No API key required — uses wttr.in.', status: 'ready' },
+  // Kit's missing skills (notable ones)
+  { id: 'k-s18', clientId: 'kit-001', name: 'apple-notes', emoji: '📝', description: 'Access and manage Apple Notes from the command line.', status: 'missing', missingRequirement: 'bins: memo' },
+  { id: 'k-s19', clientId: 'kit-001', name: 'github', emoji: '🐙', description: 'GitHub CLI integration for repos, issues, PRs, and workflows.', status: 'missing', missingRequirement: 'bins: gh' },
+  { id: 'k-s20', clientId: 'kit-001', name: 'notion', emoji: '📝', description: 'Notion API integration for pages, databases, and blocks.', status: 'missing', missingRequirement: 'env: NOTION_API_KEY' },
+  { id: 'k-s21', clientId: 'kit-001', name: 'openai-image-gen', emoji: '🖼️', description: 'Generate images using OpenAI DALL-E API.', status: 'missing', missingRequirement: 'env: OPENAI_API_KEY' },
+  { id: 'k-s22', clientId: 'kit-001', name: 'slack', emoji: '💬', description: 'Slack channel integration for messaging and notifications.', status: 'missing', missingRequirement: 'config: channels.slack' },
+  // Jacob's skills (11 ready)
+  { id: 'j-s1', clientId: 'jacob-001', name: 'gmail-send', emoji: '📦', description: 'Browser-based Gmail email automation with 3x retry logic. Sends emails via Chrome CDP.', status: 'ready' },
+  { id: 'j-s2', clientId: 'jacob-001', name: 'apple-reminders', emoji: '⏰', description: 'Create and manage Apple Reminders from the command line.', status: 'ready' },
+  { id: 'j-s3', clientId: 'jacob-001', name: 'healthcheck', emoji: '📦', description: 'Host security hardening and risk-tolerance configuration for OpenClaw deployments.', status: 'ready' },
+  { id: 'j-s4', clientId: 'jacob-001', name: 'himalaya', emoji: '📧', description: 'CLI email client — read, send, and manage email from the terminal.', status: 'ready' },
+  { id: 'j-s5', clientId: 'jacob-001', name: 'imsg', emoji: '📨', description: 'iMessage/SMS CLI — list chats, view history, watch for new messages, and send messages.', status: 'ready' },
+  { id: 'j-s6', clientId: 'jacob-001', name: 'session-logs', emoji: '📜', description: 'Search and analyze past conversation session logs using ripgrep.', status: 'ready' },
+  { id: 'j-s7', clientId: 'jacob-001', name: 'skill-creator', emoji: '📦', description: 'Create or update AgentSkills. Design, structure, and package skills with scripts and assets.', status: 'ready' },
+  { id: 'j-s8', clientId: 'jacob-001', name: 'summarize', emoji: '🧾', description: 'Summarize documents, articles, and long text into concise overviews.', status: 'ready' },
+  { id: 'j-s9', clientId: 'jacob-001', name: 'video-frames', emoji: '🎞️', description: 'Extract frames from video files using ffmpeg for analysis.', status: 'ready' },
+  { id: 'j-s10', clientId: 'jacob-001', name: 'weather', emoji: '🌤️', description: 'Get current weather and forecasts. No API key required.', status: 'ready' },
+  { id: 'j-s11', clientId: 'jacob-001', name: 'gog', emoji: '🎮', description: 'Google CLI tool for search, OAuth management, and Google API interactions.', status: 'ready' },
+];
+
+const mockModels: ModelInfo[] = [
+  // Kit's models
+  { id: 'k-m1', clientId: 'kit-001', name: 'Claude Sonnet 4', provider: 'Anthropic', authMethod: 'api_key', contextWindow: 200000, maxTokens: 8192, isPrimary: true, cost: { input: 3, output: 15 } },
+  { id: 'k-m2', clientId: 'kit-001', name: 'Kimi 2.5', provider: 'NVIDIA', authMethod: 'token', contextWindow: 128000, maxTokens: 8192, isPrimary: false, cost: { input: 0, output: 0 } },
+  { id: 'k-m3', clientId: 'kit-001', name: 'GLM-4.7', provider: 'NVIDIA', authMethod: 'token', contextWindow: 128000, maxTokens: 8192, isPrimary: false, cost: { input: 0, output: 0 } },
+  { id: 'k-m4', clientId: 'kit-001', name: 'Minimax M2.1', provider: 'NVIDIA', authMethod: 'token', contextWindow: 32000, maxTokens: 8192, isPrimary: false, cost: { input: 0, output: 0 } },
+  { id: 'k-m5', clientId: 'kit-001', name: 'Llama 3.2 3B (Local)', provider: 'Ollama', authMethod: 'free', contextWindow: 8192, maxTokens: 4096, isPrimary: false, cost: { input: 0, output: 0 } },
+  // Jacob's models
+  { id: 'j-m1', clientId: 'jacob-001', name: 'GPT-5.3 Codex', provider: 'OpenAI', authMethod: 'oauth', contextWindow: 200000, maxTokens: 16384, isPrimary: true, cost: { input: 5, output: 15 } },
+];
+
 export const useCommandCenterStore = create<CommandCenterState>((set, get) => ({
   clients: mockClients,
   selectedClientId: 'kit-001',
   clientStatuses: mockClientStatuses,
+  skills: mockSkills,
+  models: mockModels,
   activities: mockActivities,
   cronJobs: mockCronJobs,
   alerts: mockAlerts,
