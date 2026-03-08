@@ -1,0 +1,580 @@
+import { useState } from 'react';
+import { useCommandCenterStore } from '../store/useCommandCenterStore';
+import {
+  Activity,
+  Clock,
+  AlertTriangle,
+  CheckCircle2,
+  Send,
+  MessageSquare,
+  Mail,
+  Zap,
+  Server,
+  RefreshCw,
+  XCircle,
+  Heart,
+  Shield,
+  Calendar,
+  Code,
+  AlertCircle,
+  Info,
+  FileText,
+  BookOpen,
+  Bell,
+} from 'lucide-react';
+import type { AgentActivity, CronJob, Alert as AlertType, TaskRecord } from '../types/openclaw';
+
+type TabKey = 'activity' | 'cron' | 'alerts' | 'tasks';
+
+function formatTimeAgo(timestamp: string): string {
+  const diff = Date.now() - new Date(timestamp).getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return 'just now';
+  if (mins < 60) return `${mins}m ago`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  return `${days}d ago`;
+}
+
+export default function ClientDetail() {
+  const {
+    clients, selectedClientId, clientStatuses,
+    activities, cronJobs, alerts, tasks, resolveAlert,
+  } = useCommandCenterStore();
+
+  const [activeTab, setActiveTab] = useState<TabKey>('activity');
+  const client = clients.find((c) => c.id === selectedClientId);
+  const status = selectedClientId ? clientStatuses[selectedClientId] : undefined;
+
+  if (!client) {
+    return (
+      <div style={styles.empty}>
+        <Server size={48} color="var(--border)" />
+        <p style={{ color: 'var(--text-muted)', marginTop: 16, fontSize: 16 }}>
+          Select a client to view details
+        </p>
+      </div>
+    );
+  }
+
+  const clientActivities = activities
+    .filter((a) => a.clientId === client.id)
+    .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+  const clientCrons = cronJobs.filter((c) => c.clientId === client.id);
+  const clientAlerts = alerts
+    .filter((a) => a.clientId === client.id)
+    .sort((a, b) => {
+      if (a.resolved !== b.resolved) return a.resolved ? 1 : -1;
+      return new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime();
+    });
+  const clientTasks = tasks
+    .filter((t) => t.clientId === client.id)
+    .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+
+  const unresolvedAlerts = clientAlerts.filter((a) => !a.resolved).length;
+
+  const tabs: { key: TabKey; label: string; icon: React.ReactNode; badge?: number }[] = [
+    { key: 'activity', label: 'Activity', icon: <Activity size={14} /> },
+    { key: 'cron', label: 'Cron Jobs', icon: <Clock size={14} /> },
+    { key: 'alerts', label: 'Alerts', icon: <AlertTriangle size={14} />, badge: unresolvedAlerts },
+    { key: 'tasks', label: 'Tasks', icon: <CheckCircle2 size={14} /> },
+  ];
+
+  return (
+    <div style={styles.container}>
+      {/* Header */}
+      <div style={styles.header}>
+        <div style={styles.headerLeft}>
+          <div style={{
+            ...styles.statusDot,
+            backgroundColor: client.status === 'online' ? 'var(--success)' : client.status === 'degraded' ? 'var(--warning)' : 'var(--error)',
+          }} />
+          <div>
+            <h2 style={styles.headerTitle}>{client.name}</h2>
+            <span style={styles.headerSub}>{client.botName} — {client.host}:{client.port}</span>
+          </div>
+        </div>
+        <span style={styles.lastSeen}>Last seen: {formatTimeAgo(client.lastSeen)}</span>
+      </div>
+
+      {/* Status Overview */}
+      {status && (
+        <div style={styles.statusGrid}>
+          <div style={styles.statusCard}>
+            <span style={styles.statusValue}>{status.version}</span>
+            <span style={styles.statusLabel}>Version</span>
+          </div>
+          <div style={styles.statusCard}>
+            <span style={styles.statusValue}>{status.uptime}</span>
+            <span style={styles.statusLabel}>Uptime</span>
+          </div>
+          <div style={styles.statusCard}>
+            <span style={styles.statusValue}>{status.skillsReady}/{status.skillsTotal}</span>
+            <span style={styles.statusLabel}>Skills</span>
+          </div>
+          <div style={styles.statusCard}>
+            <span style={{
+              ...styles.statusValue,
+              color: status.memoryStatus === 'healthy' ? 'var(--success)' : 'var(--warning)',
+            }}>
+              {status.memoryChunks}
+            </span>
+            <span style={styles.statusLabel}>Memory Chunks</span>
+          </div>
+          <div style={styles.statusCard}>
+            <span style={{ ...styles.statusValue, fontSize: 13 }}>{status.activeModel}</span>
+            <span style={styles.statusLabel}>Model</span>
+          </div>
+          <div style={styles.statusCard}>
+            <span style={{ ...styles.statusValue, color: 'var(--primary)', fontSize: 14 }}>
+              {status.channelsOnline.join(' + ')}
+            </span>
+            <span style={styles.statusLabel}>Channels</span>
+          </div>
+        </div>
+      )}
+
+      {/* Tabs */}
+      <div style={styles.tabBar}>
+        {tabs.map((tab) => (
+          <button
+            key={tab.key}
+            style={{
+              ...styles.tab,
+              ...(activeTab === tab.key ? styles.tabActive : {}),
+            }}
+            onClick={() => setActiveTab(tab.key)}
+          >
+            {tab.icon}
+            <span>{tab.label}</span>
+            {tab.badge ? <span style={styles.tabBadge}>{tab.badge}</span> : null}
+          </button>
+        ))}
+      </div>
+
+      {/* Tab Content */}
+      <div style={styles.tabContent}>
+        {activeTab === 'activity' && <ActivityTab activities={clientActivities} />}
+        {activeTab === 'cron' && <CronTab cronJobs={clientCrons} />}
+        {activeTab === 'alerts' && <AlertsTab alerts={clientAlerts} onResolve={resolveAlert} />}
+        {activeTab === 'tasks' && <TasksTab tasks={clientTasks} />}
+      </div>
+    </div>
+  );
+}
+
+function activityIcon(type: AgentActivity['type']) {
+  switch (type) {
+    case 'message_sent': return <Send size={12} />;
+    case 'message_received': return <MessageSquare size={12} />;
+    case 'email_sent': return <Mail size={12} />;
+    case 'skill_executed': return <Zap size={12} />;
+    case 'memory_indexed': return <Server size={12} />;
+    case 'gateway_restart': return <RefreshCw size={12} />;
+    case 'error': return <XCircle size={12} />;
+    default: return <Activity size={12} />;
+  }
+}
+
+function activityColor(type: AgentActivity['type']) {
+  switch (type) {
+    case 'message_sent': return 'var(--primary)';
+    case 'message_received': return '#6C63FF';
+    case 'email_sent': return 'var(--success)';
+    case 'skill_executed': return 'var(--warning)';
+    case 'memory_indexed': return 'var(--accent)';
+    case 'gateway_restart': return 'var(--text-muted)';
+    case 'error': return 'var(--error)';
+    default: return 'var(--text-muted)';
+  }
+}
+
+function ActivityTab({ activities }: { activities: AgentActivity[] }) {
+  return (
+    <div>
+      {activities.map((a, i) => (
+        <div key={a.id} style={styles.timelineItem}>
+          <div style={styles.timelineLeft}>
+            <div style={{ ...styles.timelineDot, background: activityColor(a.type) }}>
+              {activityIcon(a.type)}
+            </div>
+            {i < activities.length - 1 && <div style={styles.timelineLine} />}
+          </div>
+          <div style={styles.timelineBody}>
+            <div style={styles.timelineText}>{a.description}</div>
+            <div style={styles.timelineMeta}>
+              {a.channel && <span style={styles.timelineChannel}>{a.channel}</span>}
+              <span style={styles.timelineTime}>{formatTimeAgo(a.timestamp)}</span>
+            </div>
+          </div>
+        </div>
+      ))}
+      {activities.length === 0 && <div style={styles.emptyTab}>No recent activity</div>}
+    </div>
+  );
+}
+
+function cronIcon(type: CronJob['type']) {
+  switch (type) {
+    case 'heartbeat': return <Heart size={16} color="var(--primary)" />;
+    case 'memory_watchdog': return <Shield size={16} color="var(--primary)" />;
+    case 'scheduled_task': return <Calendar size={16} color="var(--primary)" />;
+    default: return <Code size={16} color="var(--primary)" />;
+  }
+}
+
+function CronTab({ cronJobs }: { cronJobs: CronJob[] }) {
+  return (
+    <div style={{ display: 'grid', gap: 10 }}>
+      {cronJobs.map((job) => (
+        <div key={job.id} style={styles.card}>
+          <div style={styles.cardRow}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              {cronIcon(job.type)}
+              <span style={{ fontWeight: 600, fontSize: 14 }}>{job.name}</span>
+            </div>
+            <div style={{
+              ...styles.statusPill,
+              background: job.status === 'active' ? 'rgba(0,255,102,0.15)' : job.status === 'paused' ? 'rgba(255,200,0,0.15)' : 'rgba(255,61,113,0.15)',
+              color: job.status === 'active' ? 'var(--success)' : job.status === 'paused' ? 'var(--warning)' : 'var(--error)',
+            }}>
+              {job.status}
+            </div>
+          </div>
+          <div style={{ color: 'var(--text-muted)', fontSize: 12, marginTop: 6, marginLeft: 26 }}>
+            {job.schedule}
+          </div>
+          <div style={{ display: 'flex', gap: 16, marginTop: 6, marginLeft: 26 }}>
+            {job.lastRun && <span style={{ color: 'var(--text-muted)', fontSize: 11 }}>Last: {formatTimeAgo(job.lastRun)}</span>}
+            {job.nextRun && <span style={{ color: 'var(--primary)', fontSize: 11 }}>Next: {formatTimeAgo(job.nextRun)}</span>}
+          </div>
+        </div>
+      ))}
+      {cronJobs.length === 0 && <div style={styles.emptyTab}>No cron jobs configured</div>}
+    </div>
+  );
+}
+
+function severityColor(severity: AlertType['severity']) {
+  switch (severity) {
+    case 'critical': return 'var(--error)';
+    case 'warning': return 'var(--warning)';
+    case 'info': return 'var(--primary)';
+  }
+}
+
+function severityIcon(severity: AlertType['severity']) {
+  switch (severity) {
+    case 'critical': return <AlertCircle size={16} />;
+    case 'warning': return <AlertTriangle size={16} />;
+    case 'info': return <Info size={16} />;
+  }
+}
+
+function AlertsTab({ alerts, onResolve }: { alerts: AlertType[]; onResolve: (id: string) => void }) {
+  return (
+    <div style={{ display: 'grid', gap: 10 }}>
+      {alerts.map((alert) => (
+        <div
+          key={alert.id}
+          style={{
+            ...styles.card,
+            borderLeft: `4px solid ${severityColor(alert.severity)}`,
+            opacity: alert.resolved ? 0.5 : 1,
+          }}
+        >
+          <div style={styles.cardRow}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: alert.resolved ? 'var(--text-muted)' : severityColor(alert.severity) }}>
+              {severityIcon(alert.severity)}
+              <span style={{
+                fontWeight: 600,
+                fontSize: 14,
+                color: 'var(--text)',
+                textDecoration: alert.resolved ? 'line-through' : 'none',
+              }}>
+                {alert.title}
+              </span>
+            </div>
+          </div>
+          <div style={{ color: 'var(--text-muted)', fontSize: 13, marginTop: 6, lineHeight: 1.5 }}>
+            {alert.description}
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 8 }}>
+            <span style={{ color: 'var(--text-muted)', fontSize: 11 }}>{formatTimeAgo(alert.timestamp)}</span>
+            {!alert.resolved ? (
+              <button style={styles.resolveBtn} onClick={() => onResolve(alert.id)}>
+                Resolve
+              </button>
+            ) : (
+              <span style={{ color: 'var(--text-muted)', fontSize: 12, fontStyle: 'italic' }}>Resolved</span>
+            )}
+          </div>
+        </div>
+      ))}
+      {alerts.length === 0 && <div style={styles.emptyTab}>No alerts — all clear!</div>}
+    </div>
+  );
+}
+
+function taskIcon(type: TaskRecord['type']) {
+  switch (type) {
+    case 'email': return <Mail size={16} color="var(--primary)" />;
+    case 'message': return <MessageSquare size={16} color="var(--primary)" />;
+    case 'meeting_notes': return <FileText size={16} color="var(--primary)" />;
+    case 'document_summary': return <BookOpen size={16} color="var(--primary)" />;
+    case 'reminder': return <Bell size={16} color="var(--primary)" />;
+    case 'skill_exec': return <Zap size={16} color="var(--primary)" />;
+    default: return <Activity size={16} color="var(--primary)" />;
+  }
+}
+
+function taskStatusColor(status: TaskRecord['status']) {
+  switch (status) {
+    case 'completed': return 'var(--success)';
+    case 'failed': return 'var(--error)';
+    case 'in_progress': return 'var(--warning)';
+  }
+}
+
+function TasksTab({ tasks }: { tasks: TaskRecord[] }) {
+  return (
+    <div style={{ display: 'grid', gap: 8 }}>
+      {tasks.map((task) => (
+        <div key={task.id} style={{ ...styles.card, display: 'flex', gap: 12 }}>
+          <div style={styles.taskIconBox}>
+            {taskIcon(task.type)}
+          </div>
+          <div style={{ flex: 1 }}>
+            <div style={styles.cardRow}>
+              <span style={{ fontWeight: 600, fontSize: 14, flex: 1 }}>{task.title}</span>
+              <div style={{
+                ...styles.statusPill,
+                background: taskStatusColor(task.status) + '22',
+                color: taskStatusColor(task.status),
+              }}>
+                {task.status}
+              </div>
+            </div>
+            <div style={{ color: 'var(--text-muted)', fontSize: 12, marginTop: 4 }}>{task.description}</div>
+            <div style={{ display: 'flex', gap: 12, marginTop: 6 }}>
+              <span style={{ color: 'var(--text-muted)', fontSize: 11 }}>{formatTimeAgo(task.timestamp)}</span>
+              {task.duration && (
+                <span style={{ color: 'var(--text-muted)', fontSize: 11 }}>{(task.duration / 1000).toFixed(1)}s</span>
+              )}
+            </div>
+          </div>
+        </div>
+      ))}
+      {tasks.length === 0 && <div style={styles.emptyTab}>No tasks recorded yet</div>}
+    </div>
+  );
+}
+
+const styles: Record<string, React.CSSProperties> = {
+  container: {
+    flex: 1,
+    overflow: 'auto',
+    padding: 24,
+  },
+  empty: {
+    flex: 1,
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  header: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  headerLeft: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 12,
+  },
+  statusDot: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+  },
+  headerTitle: {
+    fontSize: 22,
+    fontWeight: 800,
+    margin: 0,
+  },
+  headerSub: {
+    color: 'var(--text-muted)',
+    fontSize: 13,
+  },
+  lastSeen: {
+    color: 'var(--text-muted)',
+    fontSize: 12,
+  },
+  statusGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
+    gap: 10,
+    marginBottom: 20,
+  },
+  statusCard: {
+    background: 'var(--surface)',
+    border: '1px solid var(--border)',
+    borderRadius: 12,
+    padding: '14px 16px',
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    gap: 4,
+  },
+  statusValue: {
+    color: 'var(--text)',
+    fontSize: 18,
+    fontWeight: 700,
+  },
+  statusLabel: {
+    color: 'var(--text-muted)',
+    fontSize: 10,
+    fontWeight: 600,
+    letterSpacing: 0.5,
+    textTransform: 'uppercase' as const,
+  },
+  tabBar: {
+    display: 'flex',
+    background: 'var(--surface)',
+    borderRadius: 10,
+    padding: 4,
+    marginBottom: 16,
+    gap: 4,
+  },
+  tab: {
+    flex: 1,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    padding: '10px 8px',
+    borderRadius: 8,
+    border: 'none',
+    background: 'transparent',
+    color: 'var(--text-muted)',
+    fontSize: 13,
+    fontWeight: 600,
+    cursor: 'pointer',
+    transition: 'all 0.15s',
+  },
+  tabActive: {
+    background: 'var(--bg)',
+    color: 'var(--primary)',
+  },
+  tabBadge: {
+    background: 'var(--warning)',
+    color: 'var(--bg)',
+    fontSize: 10,
+    fontWeight: 700,
+    borderRadius: 8,
+    padding: '1px 6px',
+    minWidth: 16,
+    textAlign: 'center' as const,
+  },
+  tabContent: {
+    flex: 1,
+  },
+  // Timeline
+  timelineItem: {
+    display: 'flex',
+    gap: 12,
+  },
+  timelineLeft: {
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    width: 28,
+  },
+  timelineDot: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    color: '#fff',
+    flexShrink: 0,
+  },
+  timelineLine: {
+    width: 2,
+    flex: 1,
+    background: 'var(--border)',
+    margin: '4px 0',
+  },
+  timelineBody: {
+    flex: 1,
+    paddingBottom: 20,
+  },
+  timelineText: {
+    fontSize: 14,
+    lineHeight: 1.5,
+  },
+  timelineMeta: {
+    display: 'flex',
+    gap: 8,
+    marginTop: 4,
+  },
+  timelineChannel: {
+    color: 'var(--primary)',
+    fontSize: 12,
+    fontWeight: 600,
+  },
+  timelineTime: {
+    color: 'var(--text-muted)',
+    fontSize: 12,
+  },
+  // Cards
+  card: {
+    background: 'var(--surface)',
+    border: '1px solid var(--border)',
+    borderRadius: 12,
+    padding: 14,
+  },
+  cardRow: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  statusPill: {
+    fontSize: 10,
+    fontWeight: 700,
+    textTransform: 'uppercase' as const,
+    padding: '3px 10px',
+    borderRadius: 10,
+    letterSpacing: 0.5,
+  },
+  resolveBtn: {
+    background: 'rgba(0,255,102,0.15)',
+    color: 'var(--success)',
+    border: 'none',
+    borderRadius: 6,
+    padding: '4px 12px',
+    fontSize: 12,
+    fontWeight: 600,
+    cursor: 'pointer',
+  },
+  taskIconBox: {
+    width: 36,
+    height: 36,
+    borderRadius: 8,
+    background: 'rgba(0,240,255,0.08)',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+  },
+  emptyTab: {
+    color: 'var(--text-muted)',
+    textAlign: 'center' as const,
+    padding: '40px 0',
+    fontSize: 14,
+  },
+};
