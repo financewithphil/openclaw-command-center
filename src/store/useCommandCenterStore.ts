@@ -49,6 +49,17 @@ const apiFetch = async <T>(host: string, port: number, path: string): Promise<T 
 
 const mockClients: OpenClawClient[] = [
   {
+    id: 'kit-001',
+    name: "Kit — Phil's Familiar",
+    botName: 'Kit',
+    host: '10.0.0.115',
+    port: 3200,
+    ownerName: 'Phil',
+    ownerPhone: '',
+    status: 'online',
+    lastSeen: new Date().toISOString(),
+  },
+  {
     id: 'jacob-001',
     name: "Jacob's Assistant",
     botName: 'Andrew',
@@ -62,6 +73,50 @@ const mockClients: OpenClawClient[] = [
 ];
 
 const mockActivities: AgentActivity[] = [
+  // Kit's activities
+  {
+    id: 'k-a1',
+    clientId: 'kit-001',
+    type: 'skill_executed',
+    description: 'Skool community pulse — 105 members, 5 online, Vg Lockedin & Jayden Rodney active, 5 new notifications',
+    timestamp: new Date(Date.now() - 1000 * 60 * 30).toISOString(),
+    channel: 'discord',
+    status: 'success',
+  },
+  {
+    id: 'k-a2',
+    clientId: 'kit-001',
+    type: 'message_received',
+    description: 'Discord message in #openclaw-main channel',
+    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 7).toISOString(),
+    channel: 'discord',
+    status: 'success',
+  },
+  {
+    id: 'k-a3',
+    clientId: 'kit-001',
+    type: 'gateway_restart',
+    description: 'Gateway restarted — PID 1416, discord + iMessage providers online',
+    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 18).toISOString(),
+    status: 'success',
+  },
+  {
+    id: 'k-a4',
+    clientId: 'kit-001',
+    type: 'memory_indexed',
+    description: 'Memory initialized — 23 files, 23 chunks, qmd vector ready',
+    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 18).toISOString(),
+    status: 'success',
+  },
+  {
+    id: 'k-a5',
+    clientId: 'kit-001',
+    type: 'skill_executed',
+    description: 'Browser launched — Chrome profile "openclaw" on 127.0.0.1:18800',
+    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 5).toISOString(),
+    status: 'success',
+  },
+  // Jacob's activities
   {
     id: 'a1',
     clientId: 'jacob-001',
@@ -116,6 +171,18 @@ const mockActivities: AgentActivity[] = [
 ];
 
 const mockCronJobs: CronJob[] = [
+  // Kit's cron jobs
+  {
+    id: 'k-c1',
+    clientId: 'kit-001',
+    name: 'Heartbeat (main)',
+    schedule: 'Every 30 minutes',
+    lastRun: new Date(Date.now() - 1000 * 60 * 7).toISOString(),
+    nextRun: new Date(Date.now() + 1000 * 60 * 23).toISOString(),
+    status: 'active',
+    type: 'heartbeat',
+  },
+  // Jacob's cron jobs
   {
     id: 'c1',
     clientId: 'jacob-001',
@@ -159,6 +226,48 @@ const mockCronJobs: CronJob[] = [
 ];
 
 const mockAlerts: Alert[] = [
+  // Kit's alerts
+  {
+    id: 'k-al1',
+    clientId: 'kit-001',
+    severity: 'warning',
+    title: 'OpenClaw update available (2026.3.7)',
+    description: 'Current version 2026.2.12 is behind stable. Run: openclaw update',
+    timestamp: new Date(Date.now() - 1000 * 60 * 60).toISOString(),
+    resolved: false,
+    category: 'system',
+  },
+  {
+    id: 'k-al2',
+    clientId: 'kit-001',
+    severity: 'warning',
+    title: 'Model below recommended tier',
+    description: 'claude-sonnet-4-20250514 is below Claude 4.5. Consider upgrading for better tool use and injection resistance.',
+    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 2).toISOString(),
+    resolved: false,
+    category: 'system',
+  },
+  {
+    id: 'k-al3',
+    clientId: 'kit-001',
+    severity: 'info',
+    title: 'Credentials dir readable by others',
+    description: '~/.openclaw/credentials mode=755. Fix: chmod 700 ~/.openclaw/credentials',
+    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 2).toISOString(),
+    resolved: false,
+    category: 'system',
+  },
+  {
+    id: 'k-al4',
+    clientId: 'kit-001',
+    severity: 'info',
+    title: 'Discord WebSocket reconnects',
+    description: 'Multiple gateway resume attempts (code 1005/1006). Likely network hiccups — cosmetic only.',
+    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 3).toISOString(),
+    resolved: false,
+    category: 'channel',
+  },
+  // Jacob's alerts
   {
     id: 'al1',
     clientId: 'jacob-001',
@@ -182,6 +291,48 @@ const mockAlerts: Alert[] = [
 ];
 
 const mockTasks: TaskRecord[] = [
+  // Kit's tasks
+  {
+    id: 'k-t1',
+    clientId: 'kit-001',
+    type: 'skill_exec',
+    title: 'Community pulse check — Skool',
+    description: '105 members, 5 online, 5 new notifications, Vg Lockedin & Jayden Rodney active',
+    timestamp: new Date(Date.now() - 1000 * 60 * 30).toISOString(),
+    status: 'completed',
+    duration: 8000,
+  },
+  {
+    id: 'k-t2',
+    clientId: 'kit-001',
+    type: 'message',
+    title: 'Discord session — #openclaw-main',
+    description: '17 active sessions, direct + group conversations',
+    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 7).toISOString(),
+    status: 'completed',
+    duration: 3000,
+  },
+  {
+    id: 'k-t3',
+    clientId: 'kit-001',
+    type: 'skill_exec',
+    title: 'Browser session launched',
+    description: 'Chrome profile "openclaw" on CDP port 18800',
+    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 5).toISOString(),
+    status: 'completed',
+    duration: 4500,
+  },
+  {
+    id: 'k-t4',
+    clientId: 'kit-001',
+    type: 'skill_exec',
+    title: 'Memory reindex',
+    description: '23 files indexed — qmd provider, vector search ready',
+    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 18).toISOString(),
+    status: 'completed',
+    duration: 5000,
+  },
+  // Jacob's tasks
   {
     id: 't1',
     clientId: 'jacob-001',
@@ -245,6 +396,17 @@ const mockTasks: TaskRecord[] = [
 ];
 
 const mockClientStatuses: Record<string, ClientStatus> = {
+  'kit-001': {
+    version: '2026.2.12',
+    hostname: 'Phillips-Mac-mini.local',
+    uptime: '18h 52m',
+    skillsReady: 17,
+    skillsTotal: 61,
+    memoryStatus: 'healthy',
+    memoryChunks: 23,
+    channelsOnline: ['Discord', 'iMessage'],
+    activeModel: 'anthropic/claude-sonnet-4-20250514',
+  },
   'jacob-001': {
     version: '2026.3.2',
     hostname: 'Andrews-Mac-mini.local',
@@ -260,7 +422,7 @@ const mockClientStatuses: Record<string, ClientStatus> = {
 
 export const useCommandCenterStore = create<CommandCenterState>((set, get) => ({
   clients: mockClients,
-  selectedClientId: mockClients[0]?.id ?? null,
+  selectedClientId: 'kit-001',
   clientStatuses: mockClientStatuses,
   activities: mockActivities,
   cronJobs: mockCronJobs,
