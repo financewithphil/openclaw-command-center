@@ -28,10 +28,13 @@ import {
   Package,
   Lock,
   Globe,
+  Users,
+  GitBranch,
+  ArrowRight,
 } from 'lucide-react';
-import type { AgentActivity, CronJob, Alert as AlertType, TaskRecord, SkillInfo, ModelInfo } from '../types/openclaw';
+import type { AgentActivity, CronJob, Alert as AlertType, TaskRecord, SkillInfo, ModelInfo, AgentNode } from '../types/openclaw';
 
-type TabKey = 'activity' | 'cron' | 'alerts' | 'tasks' | 'skills' | 'models';
+type TabKey = 'activity' | 'cron' | 'alerts' | 'tasks' | 'skills' | 'models' | 'agents';
 
 function formatTimeAgo(timestamp: string): string {
   const diff = Date.now() - new Date(timestamp).getTime();
@@ -47,7 +50,7 @@ function formatTimeAgo(timestamp: string): string {
 export default function ClientDetail() {
   const {
     clients, selectedClientId, clientStatuses,
-    activities, cronJobs, alerts, tasks, skills, models, resolveAlert,
+    activities, cronJobs, alerts, tasks, skills, models, agents, resolveAlert,
   } = useCommandCenterStore();
 
   const [activeTab, setActiveTab] = useState<TabKey>('activity');
@@ -80,6 +83,7 @@ export default function ClientDetail() {
     .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
   const clientSkills = skills.filter((s) => s.clientId === client.id);
   const clientModels = models.filter((m) => m.clientId === client.id);
+  const clientAgents = agents.filter((a) => a.clientId === client.id);
 
   const unresolvedAlerts = clientAlerts.filter((a) => !a.resolved).length;
   const readySkills = clientSkills.filter((s) => s.status === 'ready').length;
@@ -89,6 +93,7 @@ export default function ClientDetail() {
     { key: 'cron', label: 'Cron Jobs', icon: <Clock size={14} /> },
     { key: 'alerts', label: 'Alerts', icon: <AlertTriangle size={14} />, badge: unresolvedAlerts },
     { key: 'tasks', label: 'Tasks', icon: <CheckCircle2 size={14} /> },
+    { key: 'agents', label: 'Agents', icon: <Users size={14} />, badge: clientAgents.length },
     { key: 'skills', label: 'Skills', icon: <Zap size={14} />, badge: readySkills },
     { key: 'models', label: 'Models', icon: <Code size={14} /> },
   ];
@@ -171,6 +176,7 @@ export default function ClientDetail() {
         {activeTab === 'cron' && <CronTab cronJobs={clientCrons} />}
         {activeTab === 'alerts' && <AlertsTab alerts={clientAlerts} onResolve={resolveAlert} />}
         {activeTab === 'tasks' && <TasksTab tasks={clientTasks} />}
+        {activeTab === 'agents' && <AgentsTab agents={clientAgents} />}
         {activeTab === 'skills' && <SkillsTab skills={clientSkills} />}
         {activeTab === 'models' && <ModelsTab models={clientModels} />}
       </div>
@@ -384,6 +390,254 @@ function TasksTab({ tasks }: { tasks: TaskRecord[] }) {
     </div>
   );
 }
+
+function AgentsTab({ agents }: { agents: AgentNode[] }) {
+  const [selectedAgent, setSelectedAgent] = useState<string | null>(null);
+
+  const topLevel = agents.filter((a) => a.reportsTo === null);
+  const getChildren = (parentId: string) => agents.filter((a) => a.reportsTo === parentId);
+  const getAgent = (id: string) => agents.find((a) => a.id === id);
+  const selected = selectedAgent ? getAgent(selectedAgent) : null;
+
+  const statusColor = (s: AgentNode['status']) => {
+    switch (s) {
+      case 'active': return 'var(--success)';
+      case 'standby': return 'var(--warning)';
+      default: return 'var(--error)';
+    }
+  };
+
+  const renderNode = (agent: AgentNode, depth: number = 0) => {
+    const children = getChildren(agent.id);
+    const isSelected = selectedAgent === agent.id;
+    return (
+      <div key={agent.id}>
+        <button
+          onClick={() => setSelectedAgent(isSelected ? null : agent.id)}
+          style={{
+            width: '100%',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 10,
+            padding: '10px 14px',
+            paddingLeft: 14 + depth * 24,
+            borderRadius: 10,
+            border: isSelected ? '1px solid var(--primary)' : '1px solid transparent',
+            background: isSelected ? 'rgba(0,240,255,0.06)' : 'transparent',
+            color: 'var(--text)',
+            cursor: 'pointer',
+            textAlign: 'left' as const,
+            marginBottom: 2,
+          }}
+        >
+          {depth > 0 && (
+            <GitBranch size={12} color="var(--border)" style={{ marginRight: -4 }} />
+          )}
+          <span style={{ fontSize: 18 }}>{agent.emoji}</span>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontWeight: 600, fontSize: 14 }}>{agent.name}</div>
+            <div style={{ color: 'var(--text-muted)', fontSize: 11, marginTop: 1 }}>{agent.role}</div>
+          </div>
+          <div style={{
+            width: 8, height: 8, borderRadius: 4,
+            backgroundColor: statusColor(agent.status),
+            flexShrink: 0,
+          }} />
+        </button>
+        {children.map((child) => renderNode(child, depth + 1))}
+      </div>
+    );
+  };
+
+  return (
+    <div style={{ display: 'flex', gap: 16 }}>
+      {/* Org Tree */}
+      <div style={{ flex: '0 0 280px', minWidth: 0 }}>
+        <div style={{
+          fontSize: 11, fontWeight: 700, letterSpacing: 1.5,
+          color: 'var(--text-muted)', marginBottom: 10, paddingLeft: 14,
+        }}>
+          ORG CHART
+        </div>
+        <div style={{
+          background: 'var(--surface)',
+          borderRadius: 12,
+          border: '1px solid var(--border)',
+          padding: '8px 4px',
+        }}>
+          {topLevel.map((agent) => renderNode(agent))}
+        </div>
+      </div>
+
+      {/* Detail Panel */}
+      <div style={{ flex: 1, minWidth: 0 }}>
+        {selected ? (
+          <div style={{
+            background: 'var(--surface)',
+            borderRadius: 14,
+            border: '1px solid var(--border)',
+            padding: 20,
+          }}>
+            {/* Agent Header */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
+              <div style={{
+                width: 48, height: 48, borderRadius: 12,
+                background: 'rgba(0,240,255,0.08)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: 24,
+              }}>
+                {selected.emoji}
+              </div>
+              <div>
+                <h3 style={{ margin: 0, fontSize: 20, fontWeight: 800 }}>{selected.name}</h3>
+                <div style={{ color: 'var(--primary)', fontSize: 13, fontWeight: 600, marginTop: 2 }}>
+                  {selected.role}
+                </div>
+              </div>
+              <div style={{
+                marginLeft: 'auto',
+                fontSize: 10, fontWeight: 700, textTransform: 'uppercase' as const,
+                padding: '4px 10px', borderRadius: 8,
+                background: statusColor(selected.status) + '22',
+                color: statusColor(selected.status),
+              }}>
+                {selected.status}
+              </div>
+            </div>
+
+            {/* Goal */}
+            <div style={{ marginBottom: 16 }}>
+              <div style={detailLabel}>Goal</div>
+              <div style={{ color: 'var(--text)', fontSize: 14, lineHeight: 1.6 }}>
+                {selected.goal}
+              </div>
+            </div>
+
+            {/* Model */}
+            <div style={{ marginBottom: 16 }}>
+              <div style={detailLabel}>Model</div>
+              <div style={{
+                display: 'inline-flex', alignItems: 'center', gap: 6,
+                padding: '5px 12px', borderRadius: 8,
+                background: 'var(--bg)', border: '1px solid var(--border)',
+                fontSize: 13, fontWeight: 600,
+              }}>
+                <Cpu size={13} color="var(--primary)" />
+                {selected.model}
+              </div>
+            </div>
+
+            {/* Reports To */}
+            {selected.reportsTo && (
+              <div style={{ marginBottom: 16 }}>
+                <div style={detailLabel}>Reports To</div>
+                {(() => {
+                  const parent = getAgent(selected.reportsTo!);
+                  return parent ? (
+                    <button
+                      onClick={() => setSelectedAgent(parent.id)}
+                      style={{
+                        display: 'inline-flex', alignItems: 'center', gap: 6,
+                        padding: '5px 12px', borderRadius: 8,
+                        background: 'var(--bg)', border: '1px solid var(--border)',
+                        color: 'var(--text)', fontSize: 13, fontWeight: 600,
+                        cursor: 'pointer',
+                      }}
+                    >
+                      <span>{parent.emoji}</span> {parent.name}
+                    </button>
+                  ) : null;
+                })()}
+              </div>
+            )}
+
+            {/* Communicates With */}
+            {selected.communicatesWith.length > 0 && (
+              <div style={{ marginBottom: 16 }}>
+                <div style={detailLabel}>Communicates With</div>
+                <div style={{ display: 'flex', flexWrap: 'wrap' as const, gap: 6 }}>
+                  {selected.communicatesWith.map((id) => {
+                    const a = getAgent(id);
+                    return a ? (
+                      <button
+                        key={id}
+                        onClick={() => setSelectedAgent(a.id)}
+                        style={{
+                          display: 'inline-flex', alignItems: 'center', gap: 5,
+                          padding: '4px 10px', borderRadius: 8,
+                          background: 'var(--bg)', border: '1px solid var(--border)',
+                          color: 'var(--text)', fontSize: 12, cursor: 'pointer',
+                        }}
+                      >
+                        <span>{a.emoji}</span> {a.name}
+                        <ArrowRight size={10} color="var(--text-muted)" />
+                      </button>
+                    ) : null;
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Channels */}
+            {selected.channels && selected.channels.length > 0 && (
+              <div style={{ marginBottom: 16 }}>
+                <div style={detailLabel}>Channels</div>
+                <div style={{ display: 'flex', gap: 6 }}>
+                  {selected.channels.map((ch) => (
+                    <span key={ch} style={{
+                      padding: '4px 10px', borderRadius: 8,
+                      background: 'rgba(0,240,255,0.08)',
+                      color: 'var(--primary)', fontSize: 12, fontWeight: 600,
+                    }}>
+                      {ch}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Task Types */}
+            <div>
+              <div style={detailLabel}>Task Types</div>
+              <div style={{ display: 'flex', flexWrap: 'wrap' as const, gap: 6 }}>
+                {selected.taskTypes.map((t) => (
+                  <span key={t} style={{
+                    padding: '4px 10px', borderRadius: 8,
+                    background: 'var(--bg)', border: '1px solid var(--border)',
+                    color: 'var(--text-muted)', fontSize: 12,
+                  }}>
+                    {t}
+                  </span>
+                ))}
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div style={{
+            background: 'var(--surface)',
+            borderRadius: 14,
+            border: '1px solid var(--border)',
+            padding: 40,
+            textAlign: 'center' as const,
+            color: 'var(--text-muted)',
+          }}>
+            <Users size={32} color="var(--border)" />
+            <p style={{ marginTop: 12, fontSize: 14 }}>Select an agent to view details</p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+const detailLabel: React.CSSProperties = {
+  fontSize: 10,
+  fontWeight: 700,
+  letterSpacing: 1.5,
+  color: 'var(--text-muted)',
+  textTransform: 'uppercase',
+  marginBottom: 8,
+};
 
 function SkillsTab({ skills }: { skills: SkillInfo[] }) {
   const [expandedId, setExpandedId] = useState<string | null>(null);

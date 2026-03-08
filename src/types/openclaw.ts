@@ -87,6 +87,21 @@ export interface ModelInfo {
   cost: { input: number; output: number };
 }
 
+export interface AgentNode {
+  id: string;
+  clientId: string;
+  name: string;
+  emoji: string;
+  role: string;
+  goal: string;
+  reportsTo: string | null;       // id of parent agent, null = top level
+  communicatesWith: string[];     // ids of agents this one can talk to
+  taskTypes: string[];            // types of tasks this agent performs
+  model: string;
+  status: 'active' | 'standby' | 'offline';
+  channels?: string[];            // communication channels available
+}
+
 export interface BridgeResponse<T = unknown> {
   success: boolean;
   data?: T;
